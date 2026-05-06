@@ -1,0 +1,14 @@
+Bien, vamos a seguir con las siguientes modificaciones:
+1. Vamos a expresar todos los decimales con ",", de esta manera la aplicacion guarda coherencia con el informe que estamos realizando.
+2. Tenes que optimizar la función de que cuando moves un parámetro se recalcule todo de nuevo y se actualicen los gráficos y páginas. Por ejemplo en el ciclo Sabathe al modificar el alfa no se estaria actualizando automáticamente en algunos casos. Busca errores relacionados con esta función y solucionalos (optimizá)
+3. El valor de "r" en todos los casos tiene que llegar hasta 1 para poder setear y yo poder realizar comprobaciones.
+4. Me sacaste el heptano de la lista de combustibles agregamelo con los valores correspondientes al calculo. (C7H16 heptano)
+5. En los sliders quedo bien la funcion de clickar a un costado y que vaya moviendo el valor de manera precisa, pero cada vez que clickeo el punto naranja se desplaza al punto donde clickeo por una fracción de segundo, si podes arregla eso es un tema mas estético que funcional.
+6. Cuando sale el cartel: "T
+max
+= 4056 K supera el límite configurado (2500 K). El modelo aire-estándar frío sobreestima la T (ignora dissociación, c
+p
+variable, pérdidas)." 
+Primero verifica que este bien redactado en español y segundo fijate que la justificacion de texto que usas hace que no quede estético y queda como cortada la oración, solucionalo.
+7. Necesito que el slider me deje llevar la mezcla relativa a 0 asi pruebo un escenario de Q_in = 0. Acordate de colocar una advertencia cuando los calculos den valores sin sentido, no hay que dar valores porque sí.
+8. Acordate de actualizar el Readme según lo requieran las modificaciones que le vas realizando a la aplicacion

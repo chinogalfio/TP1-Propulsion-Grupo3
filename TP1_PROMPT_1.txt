@@ -1,0 +1,59 @@
+Hola, vamos a desarrollar una aplicación web de predimensionamiento básico de motores alternativos aeronáuticos, que implemente los ciclos Otto, Diesel y Sabathé, permita comparar alternativas y proponga una configuración coherente para una misión asignada.
+
+Implementar en la aplicación el cálculo completo de los estados termodinámicos de los tres ciclos ideales. Integrar el cálculo de geometría básica del motor (cilindrada, diámetro, carrera, número de cilindros) a partir de los resultados del ciclo. Generar diagramas p-v y T-s interactivos para cada ciclo.
+
+Misión:
+Altitud=6000ft ; Potencia=62HP ; Combustible=C7H16 (heptano) ; Relación de mezcla relativa=0,97.
+
+Hipótesis a tener en cuenta:
+1. Fluido de trabajo modelado como gas ideal.
+2. Procesos internamente reversibles y transformaciones idealizadas.
+3. Calores específicos constantes en la aproximación base (modelo de aire-estándar frío).
+4. Aire como mezcla ideal con k = 1,4 y R = 287 J/(kg·K) en el modelo base. 
+5. Combustión representada mediante aporte de calor equivalente Q_in calculado a partir del combustible y la relación de mezcla.
+6. Condiciones de entrada del ciclo obtenidas de la atmósfera estándar ISA a la altitud de la misión. 
+
+Entradas de la aplicación (cuando la entrada se pueda expresar en más de una unidad, el usuario debe seleccionar en que unidad la está ingresando):
+1. Altitud de operación (ft o m).
+2. Potencia efectiva requerida (HP o kW).
+3. Tipo de combustible (selector con C6H14, C7H16, C8H18 u otros). (en este caso se podría colocar un selector múltiple para evitar entradas incorrectas)
+4. Relación de mezcla relativa respecto a la estequiométrica.
+5. Relación de compresión (slider o input numérico).
+6. Coeficiente k (ajustable entre 1,30 y 1,40).
+7. Rendimiento mecánico asumido (valor por defecto justificado, entre 0,85 a 0,9 para motores aeronauticos).
+8. Selector de ciclo: Otto, Diesel o Sabathé.
+9. Para Sabathé: fracción de calor aportado a volumen constante. 
+
+Cálculos que debe realizar (y expresar en forma de tabla o de manera visual estética):
+Termodinámicos
+1. Condiciones de entrada del ciclo según atmósfera estándar ISA a la altitud indicada.
+2. Poder calorífico inferior del combustible y cálculo de Q_in a partir de la relación de mezcla.
+3. Estados termodinámicos completos (p, T, v) en cada punto del ciclo.
+4. Calores intercambiados y trabajo neto del ciclo.
+5. Rendimiento térmico teórico.
+6. Presión media efectiva (PME).
+7. Temperatura máxima y presión máxima del ciclo.
+Geométricos
+8. Cilindrada total requerida para la potencia efectiva, dada la PME y las rpm asumidas.
+9. Número de cilindros propuesto (con justificación, ya sea volumétric, por dependencia de las RPM o por factibilidad de fabricación, debes agregar cuantas opciones consideres).
+10. Cilindrada unitaria, diámetro y carrera del pistón (con relación carrera/diámetro razonable). 
+11. Volumen de cámara de combustión a partir de la relación de compresión.
+
+Salidas gráficas:
+En este apartado voy a hacer enfasis en que los graficos sean interactivos, es decir cuando cliqueo sobre ellos la idea es que se agranden de manera que pueda verse de manera detallada y al colocar el cursor sobre los datos del mismo deberán aparecer las coordenadas los puntos característicos o los puntos del gráfico donde se encuentra el cursor, siempre que se encuentre sobre una linea trazada, no quiero que me marque valores (x,y) de grafico vacio.
+1. Diagrama p-v del ciclo seleccionado.
+2. Diagrama T-s del ciclo seleccionado.
+3. Gráficos paramétricos de η, PME y Tmax en función de la relación de compresión.
+4. Comparación visual de los tres ciclos bajo la misma misión. (en este caso utiliza colores o fijate como haces para que se diferencien de manera correcta los tres ciclos)
+
+Verificaciones internas y buena práctica de la aplicación:
+Para que la aplicación tenga un alto grado de confiabilidad te voy a pedir que posea lo siguiente, es clave que hagas énfasis en el correcto funcionamiento. Se trata de una aplicación de uso académico, no necesitamos que sea la más rápida ni optimizada, pero si que funcione bien y sea coherente. Por eso te pido lo siguiente.
+• Alerta si Tmax supera un límite configurable (por defecto 2500 K). 
+• Alerta si Pmax supera un límite configurable (por defecto 100 bar). 
+• Validación de coherencia de unidades en todas las operaciones. (debe ser interna y debe expresar un cartel indicando que se han validado las unidades, no hace falta que des algo como salida, sino una confirmación de que este proceso fue realizado)
+• Manejo explícito de entradas inválidas (no buscar soluciones de compromiso porque si, si no tenés claro algo, o da algún resultado incoherente se informará con un mensaje de error, de esta manera yo, quien escribe el prompt lo puedo solucionar)
+
+Bien por último te voy a pedir lo siguiente:
+• Código comentado y legible por un tercero. (el código html que me entregues debe estar comentado y bien estructurado, de esta manera se pueden detectar errores y posibles mejoras, esta condicion la tenes que cumplir de aca en adelante cada vez que realice o te pida alguna modificacion en la aplicacion)
+• Separación clara entre módulos de cálculo y módulos de interfaz. (porfavor, somos estudiantes y el foco principal lo hacemos en los cálculos, necesitamos que esten separados de todo lo "funcional" y "estetico" de la aplicación, de esta manera podemos validar y justificar que los cálculos se realizan de manera correcta)
+• README con instrucciones de ejecución. (este readme lo podes incorporar de alguna manera en la aplicación e ir actualizandolo a medida que vaya variando la aplicación, la idea es poner un boton que diga "instrucciones de uso" o "README" y cuando clikeas en él te descarga un txt con todas las instrucciones de uso de la aplicación). Este documento debe contener como mínimo la siguiente información: ¿Qué entradas tendrá la aplicación? (altitud, potencia requerida, tipo de combustible, relación de mezcla relativa, relación de compresión, k, parámetros geométricos asumidos). • ¿Qué salidas producirá? (estados termodinámicos, rendimiento, PME, Tmax, Pmax, cilindrada, diámetro, carrera, nº de cilindros, diagramas p-v y T-s). • ¿Cómo se organizan las pantallas o secciones de la interfaz? • ¿Qué controles interactivos tendrá el usuario? (sliders, selects, inputs numéricos). • ¿Cómo se estructurará el código? (módulos de cálculo separados de la interfaz, funciones puras para la termodinámica, componentes de visualización). 

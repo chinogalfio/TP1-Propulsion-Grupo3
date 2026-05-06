@@ -1,0 +1,17 @@
+Bien te voy a enumerar los cambio y modificaciones:
+1. Las unidades de expresión que no sean en bar que sea en Pascales (obviamente podes usar kPa también o lo que corresponda por notación)
+2. La entrada de "altitud de operación" y "potencia efectiva requerida" para el usuario no es funcional,  el campo de ingreso de número es tan chico que ni se ve ni un numero, tengo que adivinar cual es el número ingresado, por otro lado el selector de unidades ocupa casi todo el campo. El tamaño del campo entero en si está bien, el problema es que el selector de unidades ocupa casi todo cuando debería ocupar 1/6 del campo y todo lo demás dejarlo para el valor en sí. Fijate vos que proporción usas pero que sea estético y funcional.
+3. El rango del rendimiento mecánico expendelo entre 0.7 y 1.0 asi el usuario puede tener una entrada más amplia.
+4. Esta es una especificación funcional, yo he manejado sliders en algunas páginas donde si toco del lado para aumentar el valor, el slider no se pone en esa posición sino que aumenta su valor en esa dirección (seteo de precisión), mientras que si quiero movimientos mayores justamente clickeo sobre el slider y lo muevo. Entendes? Osea te da esa funcionalidad extra de movimiento preciso y si queres grandes cambios manteniendo click sobre el slide lo movés como un slider típico.
+5. En combustibles vamos a poner los siguientes:
+Hexano C6H14
+Octano C8H18
+Decano C10H22
+Benceno C6H6
+Tolueno C7H8
+Fijate de adecuar los cálculos de manera correcta a estos nuevos combustibles según corresponda.
+6. En los graficos de comparación, en la presentación incial fíjate que no queden pegados a los bordes los gráficos. Para poder verlos bien le tengo que sacar un poco de zoom pero no es la idea, estaría bueno que se vean bien apenas entro.
+7. Me gustaría que desaparezca el botón de "calcular" y cada vez que selecciono un ciclo me aparezcan directamente los cálculos de ese tipo de ciclo.
+8. En cuanto a la relación de compresión debe aparecer para setear una relación de compresión específica por cada tipo de ciclo (otto, sabathe y diesel) asi son más comparables los resultados.
+
+Fijate en todas las modificaciones que te mencione y ejecutalas una por una.

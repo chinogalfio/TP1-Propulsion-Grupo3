@@ -1,0 +1,17 @@
+Solo quiero que cambies la estética de colores (CSS).
+OBJETIVO:
+
+* Estilo institucional moderno, pero en versión clara (fondo blanco).
+* Que se vea profesional y diferente a plantillas genéricas.
+REQUISITOS DE COLORES:
+
+* Fondo principal: blanco (#ffffff).
+* Texto principal: negro/gris muy oscuro (#111 o similar).
+* Color acento: azul profundo (#0b3d91) o rojo oscuro (#a30000) u otro.
+* Evitar colores brillantes.
+APLICACIÓN:
+
+* Navbar, botones y links deben usar el color acento.
+* Hover: cambio sutil (ligeramente más oscuro o más claro).
+* Secciones pueden alternar entre blanco y gris muy claro (#f5f5f5) para separar contenido.
+* Mantener buen contraste y legibilidad.
