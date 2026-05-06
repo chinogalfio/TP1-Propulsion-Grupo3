@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<!--
+==================================================================================
+  APLICACIÓN DE PREDIMENSIONAMIENTO DE MOTORES ALTERNATIVOS AERONÁUTICOS
+  Ciclos termodinámicos: Otto, Diesel y Sabathé
+  Modelo: Aire-Estándar Frío (cold air-standard)
+  Uso: Académico - Trabajo Práctico Nº 1
+==================================================================================
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Predimensionamiento de Motores Alternativos Aeronáuticos</title>
+
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-0:        #ffffff;
+      --bg-1:        #f5f5f5;
+      --bg-2:        #ebebeb;
+      --bg-3:        #e0e0e0;
+      --line:        #d0d5dd;
+      --line-soft:   #e4e7ec;
+      --txt-0:       #111111;
+      --txt-1:       #3d4a5c;
+      --txt-2:       #6b7a8e;
+      --accent:      #0b3d91;
+      --accent-2:    #1a5fb4;
+      --ok:          #1a7a4a;
+      --warn:        #92400e;
+      --err:         #a30000;
+      --otto:        #0b3d91;
+      --diesel:      #a30000;
+      --sabathe:     #5c3d0e;
+      --shadow:      0 4px 20px rgba(11,61,145,0.10);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      background: var(--bg-0);
+      color: var(--txt-0);
+      font-family: 'Manrope', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    body {
+      background-image:
+        linear-gradient(rgba(11,61,145,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(11,61,145,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ---- HEADER ---- */
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: var(--bg-1);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar h1 {
+      font-family: 'Manrope', sans-serif;
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: 0.02em;
+    }
+    .topbar h1 .dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      margin-right: 10px;
+      box-shadow: 0 0 12px var(--accent);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .topbar .meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--txt-2);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ---- SIDEBAR ---- */
+    .sidebar {
+      background: var(--bg-1);
+      border-right: 1px solid var(--line);
+      padding: 20px;
+      overflow-y: auto;
+      max-height: calc(100vh - 56px);
+      position: sticky;
+      top: 56px;
+    }
+    .sidebar h2 {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--txt-2);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .sidebar h2:not(:first-of-type) { margin-top: 22px; }
+
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: inline-block;
+      font-size: 12px;
+      color: var(--txt-1);
+      margin-bottom: 6px;
+      font-weight: 500;
+      cursor: help;
+      border-bottom: 1px dotted var(--txt-2);
+    }
+    .field .label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Input numérico editable (reemplaza value-display) */
+    .field .value-input {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 500;
+      background: transparent;
+      border: none;
+      text-align: right;
+      width: 50px;
+      padding: 0;
+      outline: none;
+      border-bottom: 1px dashed var(--line-soft);
+      transition: border-color 0.15s;
+    }
+    .field .value-input:focus { border-bottom-color: var(--accent); }
+    .field .value-input::-webkit-inner-spin-button,
+    .field .value-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .field .value-input[type=number] { -moz-appearance: textfield; }
+
+    .input-group {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 60px;
+      align-items: stretch;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .input-group:focus-within { border-color: var(--accent-2); }
+    .input-group input {
+      width: 100%; min-width: 0;
+      background: var(--bg-2); border: none; padding: 9px 12px;
+      color: var(--txt-0); font-family: 'JetBrains Mono', monospace; font-size: 13px; outline: none;
+    }
+    .input-group select {
+      width: 60px; min-width: 60px; max-width: 60px;
+      background: var(--bg-3); border: none; border-left: 1px solid var(--line);
+      padding: 0 16px 0 8px; color: var(--txt-1); font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; outline: none; cursor: pointer; text-align: left;
+      appearance: none; -webkit-appearance: none;
+      background-image: linear-gradient(45deg, transparent 50%, var(--txt-2) 50%),
+                        linear-gradient(135deg, var(--txt-2) 50%, transparent 50%);
+      background-position: calc(100% - 9px) 50%, calc(100% - 5px) 50%;
+      background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;
+    }
+
+    .field select {
+      width: 100%; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px;
+      padding: 9px 12px; color: var(--txt-0); font-family: 'JetBrains Mono', monospace; font-size: 13px; outline: none; cursor: pointer;
+    }
+    .field select:focus { border-color: var(--accent-2); }
+
+    .field input[type="range"] {
+      width: 100%; -webkit-appearance: none; appearance: none; background: transparent; margin-top: 4px;
+    }
+    .r-row {
+      transition: opacity 0.15s, background 0.15s;
+      padding: 4px 6px; margin-left: -6px; margin-right: -6px; border-radius: 4px; opacity: 0.55;
+    }
+    .r-row.active { opacity: 1; background: rgba(11,61,145,0.06); }
+    .r-tag { display: inline-block; font-size: 10px; vertical-align: middle; margin-right: 4px; }
+    .r-tag.otto { color: var(--otto); } .r-tag.diesel { color: var(--diesel); } .r-tag.sabathe { color: var(--sabathe); }
+    .field input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: var(--bg-3); border-radius: 2px; }
+    .field input[type="range"]::-moz-range-track { height: 4px; background: var(--bg-3); border-radius: 2px; }
+    .field input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%;
+      margin-top: -5px; cursor: pointer; box-shadow: 0 0 8px rgba(11,61,145,0.35);
+    }
+    .field input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; background: var(--accent); border-radius: 50%; border: none; cursor: pointer; }
+
+    .cycle-selector { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .cycle-selector input[type="radio"] { display: none; }
+    .cycle-selector label {
+      text-align: center; padding: 10px 4px; background: var(--bg-2); border: 1px solid var(--line);
+      border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; margin: 0;
+    }
+    .cycle-selector input[type="radio"]:checked + label {
+      background: var(--bg-3); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+
+    .btn-secondary {
+      padding: 8px 14px; background: transparent; color: var(--txt-1); border: 1px solid var(--line);
+      border-radius: 6px; font-family: 'Manrope', sans-serif; font-size: 12px; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--accent-2); color: var(--accent-2); }
+
+    /* ---- WORKSPACE ---- */
+    .workspace { padding: 24px; overflow-y: auto; max-height: calc(100vh - 56px); }
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 22px; overflow-x: auto; }
+    .tab {
+      padding: 10px 18px; background: transparent; border: none; color: var(--txt-2); font-family: 'Manrope', sans-serif;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap;
+    }
+    .tab:hover { color: var(--txt-0); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.2s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    @media (max-width: 1100px) { .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+
+    .card { background: var(--bg-1); border: 1px solid var(--line); border-radius: 8px; padding: 18px; }
+    .card .lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--txt-2); margin-bottom: 8px; }
+    .card .val { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 500; color: var(--accent); }
+    .card .val.small { font-size: 16px; }
+    .card .unit { font-size: 12px; color: var(--txt-2); margin-left: 4px; }
+    .card.full { grid-column: 1/-1; }
+    .card h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--txt-1); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); }
+
+    table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+    th { text-align: left; padding: 10px 14px; background: var(--bg-2); color: var(--txt-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: 10.5px; border-bottom: 1px solid var(--line); }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); color: var(--txt-0); }
+    tr:hover td { background: var(--bg-2); }
+    td.num { color: var(--accent); }
+
+    .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 12px; font-size: 13px; line-height: 1.55; border: 1px solid; text-align: left; }
+    .alert::before { font-family: 'JetBrains Mono', monospace; font-weight: 700; flex-shrink: 0; line-height: 1.55; }
+    .alert-msg { flex: 1 1 auto; min-width: 0; text-align: left; word-wrap: break-word; overflow-wrap: break-word; }
+    .alert.ok { color: var(--ok); border-color: rgba(26,122,74,0.35); background: rgba(26,122,74,0.07); } .alert.ok::before { content: "✓"; }
+    .alert.warn { color: var(--warn); border-color: rgba(146,64,14,0.35); background: rgba(146,64,14,0.07); } .alert.warn::before { content: "▲"; }
+    .alert.err { color: var(--err); border-color: rgba(163,0,0,0.35); background: rgba(163,0,0,0.07); } .alert.err::before { content: "✗"; }
+    .alert.info { color: var(--accent-2); border-color: rgba(26,95,180,0.35); background: rgba(26,95,180,0.07); } .alert.info::before { content: "i"; font-style: italic; }
+
+    .plot-card { background: var(--bg-1); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 16px; position: relative; }
+    .plot-card .plot-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .plot-card h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--txt-1); margin: 0; padding: 0; border: none; }
+    .plot { width: 100%; height: 420px; }
+
+    .modal-bg { position: fixed; inset: 0; background: rgba(200,210,220,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 30px; }
+    .modal-bg.active { display: flex; }
+    .modal-content { width: 100%; max-width: 1400px; height: 100%; max-height: 900px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 20px; position: relative; display: flex; flex-direction: column; }
+    .modal-content .plot-large { flex: 1; width: 100%; }
+    .modal-close { position: absolute; top: 12px; right: 14px; background: var(--bg-2); color: var(--txt-0); border: 1px solid var(--line); border-radius: 6px; width: 36px; height: 36px; cursor: pointer; font-size: 18px; font-family: 'JetBrains Mono', monospace; z-index: 10; }
+    .modal-close:hover { background: var(--err); color: white; }
+
+    .empty-state { padding: 40px; text-align: center; color: var(--txt-2); font-size: 13px; }
+    .empty-state code { background: var(--bg-2); padding: 2px 8px; border-radius: 4px; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+
+    .justify-block { background: var(--bg-2); border-left: 3px solid var(--accent-2); padding: 12px 16px; border-radius: 4px; font-size: 12.5px; color: var(--txt-1); margin-top: 10px; }
+    .justify-block strong { color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: var(--bg-0); }
+    ::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 5px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--line); }
+
+    details { margin-top: 14px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--txt-1); }
+    details summary { cursor: pointer; color: var(--accent-2); font-weight: 600; user-select: none; }
+    details[open] summary { margin-bottom: 8px; }
+
+    .cycle-tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    .cycle-tag.otto { background: rgba(11,61,145,0.10); color: var(--otto); }
+    .cycle-tag.diesel { background: rgba(163,0,0,0.10); color: var(--diesel); }
+    .cycle-tag.sabathe { background: rgba(92,61,14,0.10); color: var(--sabathe); }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============================ TOP BAR ============================ -->
+  <header class="topbar">
+    <h1><span class="dot"></span>Predimensionamiento de Motores Alternativos Aeronáuticos</h1>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <span class="meta">Modelo: Aire-Estándar Frío · ISA</span>
+      <button class="btn-secondary" id="btnReadme">README ↓</button>
+    </div>
+  </header>
+
+  <!-- ============================ SIDEBAR ============================ -->
+  <aside class="sidebar">
+    <h2>Misión</h2>
+
+    <div class="field">
+      <label title="Altitud de operación respecto al nivel del mar (define presión y temperatura inicial según atmósfera estándar ISA).">Altitud de operación</label>
+      <div class="input-group">
+        <input type="number" id="inAltitud" value="6000" step="100" min="0" />
+        <select id="inAltitudUnit">
+          <option value="ft" selected>ft</option>
+          <option value="m">m</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label title="Potencia al freno (Brake Horsepower o kW) requerida para dimensionar la cilindrada del motor.">Potencia efectiva requerida</label>
+      <div class="input-group">
+        <input type="number" id="inPot" value="62" step="1" min="1" />
+        <select id="inPotUnit">
+          <option value="HP" selected>HP</option>
+          <option value="kW">kW</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label title="Tipo de hidrocarburo utilizado, determina el Poder Calorífico Inferior (PCI) y la estequiometría de la mezcla.">Combustible</label>
+      <select id="inFuel">
+        <optgroup label="Alcanos (CnH2n+2)">
+          <option value="C6H14">C₆H₁₄ — n-Hexano</option>
+          <option value="C7H16" selected>C₇H₁₆ — n-Heptano</option>
+          <option value="C8H18">C₈H₁₈ — Octano</option>
+          <option value="C10H22">C₁₀H₂₂ — Decano</option>
+        </optgroup>
+        <optgroup label="Aromáticos">
+          <option value="C6H6">C₆H₆ — Benceno</option>
+          <option value="C7H8">C₇H₈ — Tolueno</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="field">
+      <div class="label-row">
+        <label title="Relación (Combustible/Aire) real dividida por la estequiométrica. φ<1 mezcla pobre, φ>1 mezcla rica.">Relación de mezcla relativa φ</label>
+        <input type="number" class="value-input" id="dPhi" value="0.97" step="0.01">
+      </div>
+      <input type="range" id="inPhi" min="0" max="1.4" step="0.01" value="0.97" />
+    </div>
+
+    <h2>Parámetros del ciclo</h2>
+
+    <div class="field">
+      <label title="Modelo termodinámico a evaluar. Otto (v=cte), Diesel (p=cte), Sabathé (mixto).">Tipo de ciclo</label>
+      <div class="cycle-selector">
+        <input type="radio" name="ciclo" id="cOtto" value="otto">
+        <label for="cOtto">Otto</label>
+        <input type="radio" name="ciclo" id="cDiesel" value="diesel">
+        <label for="cDiesel">Diesel</label>
+        <input type="radio" name="ciclo" id="cSabathe" value="sabathe" checked>
+        <label for="cSabathe">Sabathé</label>
+      </div>
+    </div>
+
+    <div class="field r-row" id="rowR_otto">
+      <div class="label-row">
+        <label title="Relación de compresión volumétrica (V_max / V_min) para el ciclo Otto."><span class="r-tag otto">●</span> r — Otto</label>
+        <input type="number" class="value-input" id="dR_otto" value="8.0" step="0.1" min="1" max="22">
+      </div>
+      <input type="range" id="inR_otto" min="1" max="22" step="0.1" value="8" />
+    </div>
+
+    <div class="field r-row" id="rowR_diesel">
+      <div class="label-row">
+        <label title="Relación de compresión volumétrica (V_max / V_min) para el ciclo Diesel. Tiene un límite inferior dinámico para garantizar la combustión dentro de la carrera."><span class="r-tag diesel">●</span> r — Diesel</label>
+        <input type="number" class="value-input" id="dR_diesel" value="18.0" step="0.1" min="1" max="25">
+      </div>
+      <input type="range" id="inR_diesel" min="1" max="25" step="0.1" value="18" />
+    </div>
+
+    <div class="field r-row" id="rowR_sabathe">
+      <div class="label-row">
+        <label title="Relación de compresión volumétrica (V_max / V_min) para el ciclo Sabathé."><span class="r-tag sabathe">●</span> r — Sabathé</label>
+        <input type="number" class="value-input" id="dR_sabathe" value="12.0" step="0.1" min="1" max="22">
+      </div>
+      <input type="range" id="inR_sabathe" min="1" max="22" step="0.1" value="12" />
+    </div>
+
+    <div class="field">
+      <div class="label-row">
+        <label title="Coeficiente de dilatación adiabática o relación de calores específicos (cp/cv).">Coeficiente k = c<sub>p</sub>/c<sub>v</sub></label>
+        <input type="number" class="value-input" id="dK" value="1.40" step="0.01" min="1.00" max="1.70">
+      </div>
+      <input type="range" id="inK" min="1.00" max="1.70" step="0.01" value="1.40" />
+    </div>
+
+    <div class="field" id="fldAlpha" style="display:none;">
+      <div class="label-row">
+        <label title="Fracción del calor total que se aporta a volumen constante en el ciclo Sabathé.">Sabathé: fracción Q a v=cte (α)</label>
+        <input type="number" class="value-input" id="dAlpha" value="0.50" step="0.01">
+      </div>
+      <input type="range" id="inAlpha" min="0" max="1" step="0.01" value="0.5" />
+    </div>
+
+    <h2>Hipótesis mecánicas</h2>
+
+    <div class="field">
+      <div class="label-row">
+        <label title="Rendimiento mecánico del motor (pérdidas por fricción y arrastre de accesorios).">Rendimiento mecánico η<sub>m</sub></label>
+        <input type="number" class="value-input" id="dEtaMec" value="0.85" step="0.01">
+      </div>
+      <input type="range" id="inEtaMec" min="0.70" max="1.00" step="0.01" value="0.85" />
+    </div>
+
+    <div class="field">
+      <label title="Revoluciones por minuto nominales para el cálculo de cilindrada.">RPM nominal del motor</label>
+      <input type="number" id="inRPM" value="2700" step="100" min="1000" max="6000"
+             style="width:100%; background:var(--bg-2); border:1px solid var(--line); border-radius:6px; padding:9px 12px; color:var(--txt-0); font-family:'JetBrains Mono', monospace; font-size:13px; outline:none;"/>
+    </div>
+
+    <h2>Límites de seguridad</h2>
+
+    <div class="field">
+      <label title="Límite estructural y de materiales para generar advertencias de temperatura.">T<sub>max</sub> permitida [K]</label>
+      <input type="number" id="inLimT" value="4200" step="50" min="500"
+             style="width:100%; background:var(--bg-2); border:1px solid var(--line); border-radius:6px; padding:9px 12px; color:var(--txt-0); font-family:'JetBrains Mono', monospace; font-size:13px; outline:none;"/>
+    </div>
+
+    <div class="field">
+      <label title="Límite estructural y de materiales para generar advertencias de presión.">p<sub>max</sub> permitida [kPa]</label>
+      <input type="number" id="inLimP" value="10000" step="500" min="1000"
+             style="width:100%; background:var(--bg-2); border:1px solid var(--line); border-radius:6px; padding:9px 12px; color:var(--txt-0); font-family:'JetBrains Mono', monospace; font-size:13px; outline:none;"/>
+    </div>
+  </aside>
+
+  <!-- ============================ WORKSPACE ============================ -->
+  <main class="workspace">
+
+    <div class="tabs">
+      <button class="tab active" data-tab="resumen">Resumen</button>
+      <button class="tab" data-tab="estados">Estados Termodinámicos</button>
+      <button class="tab" data-tab="diagramas">Diagramas p-v / T-s</button>
+      <button class="tab" data-tab="parametricos">Análisis Paramétrico</button>
+      <button class="tab" data-tab="comparacion">Comparación de Ciclos</button>
+      <button class="tab" data-tab="geometria">Geometría del Motor</button>
+    </div>
+
+    <div id="alerts"></div>
+
+    <!-- TAB: RESUMEN -->
+    <section class="tab-content active" data-tab="resumen">
+      <div id="empty-resumen" class="empty-state">
+        Ajustá los parámetros del panel izquierdo. Los resultados se recalculan automáticamente.
+      </div>
+      <div id="content-resumen" style="display:none;">
+        <div class="grid-3" style="margin-bottom: 16px;">
+          <div class="card"><div class="lbl">Ciclo seleccionado</div>
+            <div class="val small"><span id="rCiclo" class="cycle-tag otto">OTTO</span></div></div>
+          <div class="card"><div class="lbl">Combustible</div>
+            <div class="val small" id="rFuel">—</div></div>
+          <div class="card"><div class="lbl">Altitud</div>
+            <div class="val small" id="rAlt">—</div></div>
+        </div>
+
+        <div class="grid-4" style="margin-bottom:16px;">
+          <div class="card"><div class="lbl">Rend. térmico (η)</div>
+            <div class="val" id="rEta">—</div></div>
+          <div class="card"><div class="lbl">PME</div>
+            <div class="val" id="rPME">—<span class="unit">kPa</span></div></div>
+          <div class="card"><div class="lbl">T máxima</div>
+            <div class="val" id="rTmax">—<span class="unit">K</span></div></div>
+          <div class="card"><div class="lbl">p máxima</div>
+            <div class="val" id="rPmax">—<span class="unit">kPa</span></div></div>
+        </div>
+
+        <div class="grid-4" style="margin-bottom:16px;">
+          <div class="card"><div class="lbl">W neto / kg aire</div>
+            <div class="val" id="rWnet">—<span class="unit">kJ/kg</span></div></div>
+          <div class="card"><div class="lbl">Q in</div>
+            <div class="val" id="rQin">—<span class="unit">kJ/kg</span></div></div>
+          <div class="card"><div class="lbl">Q out</div>
+            <div class="val" id="rQout">—<span class="unit">kJ/kg</span></div></div>
+          <div class="card"><div class="lbl">PCI combustible</div>
+            <div class="val" id="rPCI">—<span class="unit">MJ/kg</span></div></div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card"><div class="lbl">Cilindrada total</div>
+            <div class="val" id="rVtot">—<span class="unit">cm³</span></div></div>
+          <div class="card"><div class="lbl">Nº de cilindros</div>
+            <div class="val" id="rNcyl">—</div></div>
+          <div class="card"><div class="lbl">Diámetro × Carrera</div>
+            <div class="val small" id="rDxS">—</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: ESTADOS -->
+    <section class="tab-content" data-tab="estados">
+      <div class="card full">
+        <h3>Condiciones de entrada (Atmósfera ISA)</h3>
+        <div id="isaTable"></div>
+      </div>
+      <div class="card full" style="margin-top:16px;">
+        <h3>Cálculo del aporte de calor Q<sub>in</sub></h3>
+        <div id="qinTable"></div>
+      </div>
+      <div class="card full" style="margin-top:16px;">
+        <h3>Estados termodinámicos del ciclo</h3>
+        <div id="statesTable"></div>
+        <details>
+          <summary>Ver definición y orden de los estados según el ciclo</summary>
+          <div id="cycleDescription" style="margin-top:8px; line-height:1.7;"></div>
+        </details>
+      </div>
+      <div class="card full" style="margin-top:16px;">
+        <h3>Calores y trabajo del ciclo</h3>
+        <div id="energyTable"></div>
+      </div>
+    </section>
+
+    <!-- TAB: DIAGRAMAS -->
+    <section class="tab-content" data-tab="diagramas">
+      <div class="plot-card">
+        <div class="plot-header">
+          <h3>Diagrama p-v</h3>
+          <button class="btn-secondary" onclick="UI.expandPlot('plotPV')">⤢ Expandir</button>
+        </div>
+        <div id="plotPV" class="plot"></div>
+      </div>
+      <div class="plot-card">
+        <div class="plot-header">
+          <h3>Diagrama T-s</h3>
+          <button class="btn-secondary" onclick="UI.expandPlot('plotTS')">⤢ Expandir</button>
+        </div>
+        <div id="plotTS" class="plot"></div>
+      </div>
+    </section>
+
+    <!-- TAB: PARAMÉTRICOS -->
+    <section class="tab-content" data-tab="parametricos">
+      <div class="alert info" style="margin-bottom:16px;">
+        Análisis paramétrico: η, PME y T<sub>max</sub> en función de la relación de compresión r,
+        manteniendo el resto de los parámetros constantes. El punto destacado corresponde al r seleccionado.
+      </div>
+      <div class="plot-card">
+        <div class="plot-header">
+          <h3>Rendimiento térmico vs r</h3>
+          <button class="btn-secondary" onclick="UI.expandPlot('plotPEta')">⤢ Expandir</button>
+        </div>
+        <div id="plotPEta" class="plot"></div>
+      </div>
+      <div class="plot-card">
+        <div class="plot-header">
+          <h3>PME vs r</h3>
+          <button class="btn-secondary" onclick="UI.expandPlot('plotPPME')">⤢ Expandir</button>
+        </div>
+        <div id="plotPPME" class="plot"></div>
+      </div>
+      <div class="plot-card">
+        <div class="plot-header">
+          <h3>T<sub>max</sub> vs r</h3>
+          <button class="btn-secondary" onclick="UI.expandPlot('plotPTmax')">⤢ Expandir</button>
+        </div>
+        <div id="plotPTmax" class="plot"></div>
+      </div>
+    </section>
+
+    <!-- TAB: COMPARACIÓN -->
+    <section class="tab-content" data-tab="comparacion">
+      <div class="alert info" style="margin-bottom:16px;">
+        Comparación de los tres ciclos bajo las mismas condiciones de misión (mismo Q<sub>in</sub>, r, k y altitud).
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="lbl"><span class="cycle-tag otto">OTTO</span></div>
+          <div class="val small" id="cmpOtto">—</div></div>
+        <div class="card"><div class="lbl"><span class="cycle-tag diesel">DIESEL</span></div>
+          <div class="val small" id="cmpDiesel">—</div></div>
+      </div>
+      <div class="grid-2" style="margin-top:16px;">
+        <div class="card"><div class="lbl"><span class="cycle-tag sabathe">SABATHÉ</span></div>
+          <div class="val small" id="cmpSabathe">—</div></div>
+        <div class="card"><div class="lbl">Notas</div>
+          <div style="font-size:12px; color:var(--txt-1); line-height:1.6;">
+            Otto: combustión a v=cte. Diesel: combustión a p=cte. Sabathé: dual (mezcla de ambas).
+          </div>
+        </div>
+      </div>
+      <div class="plot-card" style="margin-top:16px;">
+        <div class="plot-header">
+          <h3>Comparación p-v</h3>
+          <button class="btn-secondary" onclick="UI.expandPlot('plotCmpPV')">⤢ Expandir</button>
+        </div>
+        <div id="plotCmpPV" class="plot"></div>
+      </div>
+      <div class="plot-card">
+        <div class="plot-header">
+          <h3>Comparación T-s</h3>
+          <button class="btn-secondary" onclick="UI.expandPlot('plotCmpTS')">⤢ Expandir</button>
+        </div>
+        <div id="plotCmpTS" class="plot"></div>
+      </div>
+    </section>
+
+    <!-- TAB: GEOMETRÍA -->
+    <section class="tab-content" data-tab="geometria">
+      <div class="card full">
+        <h3>Cálculo geométrico</h3>
+        <div id="geoTable"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Modal para zoom -->
+<div class="modal-bg" id="modal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="UI.closeModal()">✕</button>
+    <h3 id="modalTitle" style="margin-bottom:14px; font-size:13px; color:var(--accent); letter-spacing:0.1em; text-transform:uppercase;">—</h3>
+    <div id="modalPlot" class="plot-large"></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================================
+   MÓDULO ATM
+   ===================================================================================== */
+const ATM = (function () {
+  const T0 = 288.15, P0 = 101325, RHO0 = 1.225, L  = 0.0065, G  = 9.80665, R  = 287.05287;
+  function isa(hMeters) {
+    if (hMeters < 0) throw new Error('Altitud negativa no permitida.');
+    let T, p;
+    if (hMeters <= 11000) {
+      T = T0 - L * hMeters; p = P0 * Math.pow(T / T0, G / (L * R));
+    } else if (hMeters <= 20000) {
+      const T11 = T0 - L * 11000; const p11 = P0 * Math.pow(T11 / T0, G / (L * R));
+      T = T11; p = p11 * Math.exp(-G * (hMeters - 11000) / (R * T11));
+    } else {
+      throw new Error('Altitud > 20 km fuera del modelo ISA implementado.');
+    }
+    const rho = p / (R * T);
+    return { T, p, rho };
+  }
+  return { isa, R, G, T0, P0 };
+})();
+
+/* =====================================================================================
+   MÓDULO COMB
+   ===================================================================================== */
+const COMB = (function () {
+  const O2_MASS_FRACTION = 0.232, M_O2 = 31.998, M_C = 12.011, M_H = 1.008;
+  const FUELS = {
+    'CH4':    { name: 'Metano',    x: 1, y: 4,  PCI: 50000, formula: 'CH₄' },
+    'C2H6':   { name: 'Etano',     x: 2, y: 6,  PCI: 47500, formula: 'C₂H₆' },
+    'C3H8':   { name: 'Propano',   x: 3, y: 8,  PCI: 46350, formula: 'C₃H₈' },
+    'C4H10':  { name: 'Butano',    x: 4, y: 10, PCI: 45750, formula: 'C₄H₁₀' },
+    'C6H14':  { name: 'n-Hexano',  x: 6, y: 14, PCI: 44750, formula: 'C₆H₁₄' },
+    'C7H16':  { name: 'n-Heptano', x: 7, y: 16, PCI: 44560, formula: 'C₇H₁₆' },
+    'C8H18':  { name: 'Octano',    x: 8, y: 18, PCI: 44400, formula: 'C₈H₁₈' },
+    'C10H22': { name: 'Decano',    x: 10, y: 22, PCI: 44240, formula: 'C₁₀H₂₂' },
+    'C2H4':   { name: 'Etileno',   x: 2, y: 4,  PCI: 47200, formula: 'C₂H₄' },
+    'C3H6':   { name: 'Propileno', x: 3, y: 6,  PCI: 45800, formula: 'C₃H₆' },
+    'C2H2':   { name: 'Acetileno', x: 2, y: 2,  PCI: 48280, formula: 'C₂H₂' },
+    'C6H6':   { name: 'Benceno',   x: 6, y: 6,  PCI: 40140, formula: 'C₆H₆' },
+    'C7H8':   { name: 'Tolueno',   x: 7, y: 8,  PCI: 40520, formula: 'C₇H₈' }
+  };
+
+  function afrStoich(x, y) {
+    const M_fuel = x * M_C + y * M_H, nO2 = x + y / 4;
+    return (nO2 * M_O2 / O2_MASS_FRACTION) / M_fuel;
+  }
+
+  function qIn(fuelKey, phi) {
+    const f = FUELS[fuelKey];
+    if (!f) throw new Error(`Combustible "${fuelKey}" no reconocido.`);
+    if (phi < 0) throw new Error('φ no puede ser negativo.');
+
+    const AFR_st = afrStoich(f.x, f.y);
+    if (phi === 0) {
+      return { fuel: f, AFR_stoich: AFR_st, AFR_actual: Infinity, mixtureType: 'sin combustible (φ=0)', Qin: 0, Qin_kJkg: 0 };
+    }
+    const AFR_act = AFR_st / phi;
+    const Qin_per_kg_air = f.PCI / AFR_act;
+    return {
+      fuel: f, AFR_stoich: AFR_st, AFR_actual: AFR_act,
+      mixtureType: phi > 1 ? 'rica' : (phi < 1 ? 'pobre' : 'estequiométrica'),
+      Qin: Qin_per_kg_air * 1000, Qin_kJkg: Qin_per_kg_air
+    };
+  }
+
+  return { FUELS, afrStoich, qIn };
+})();
+
+/* =====================================================================================
+   MÓDULO CICLO
+   ===================================================================================== */
+const CICLO = (function () {
+  const R = 287.05287;
+  // Protección para k = 1.0 (isoterma ideal) limitándolo al fondo matemático.
+  const cv  = (k) => R / (Math.max(1.001, k) - 1);
+  const cp  = (k) => Math.max(1.001, k) * R / (Math.max(1.001, k) - 1);
+  const vSpec = (T, p) => R * T / p;
+  const sFromT_v = (T, v, k, T_ref, v_ref) => cv(k) * Math.log(T / T_ref) + R * Math.log(v / v_ref);
+
+  function safeDiv(num, den, tol = 1e-12) { return Math.abs(den) < tol ? 0 : num / den; }
+
+  function otto({ T1, p1, r, k, Qin }) {
+    const v1 = vSpec(T1, p1), v2 = v1 / r, T2 = T1 * Math.pow(r, k - 1), p2 = p1 * Math.pow(r, k);
+    const v3 = v2, T3 = T2 + Qin / cv(k), p3 = p2 * (T3 / T2);
+    const v4 = v1, T4 = T3 * Math.pow(v3 / v4, k - 1), p4 = p3 * Math.pow(v3 / v4, k);
+    const Qin_check = cv(k) * (T3 - T2), Qout = cv(k) * (T4 - T1);
+    const Wnet = Qin_check - Qout, eta = safeDiv(Wnet, Qin_check), PME = safeDiv(Wnet, v1 - v2);
+    const states = [{ id:'1', T:T1, p:p1, v:v1 }, { id:'2', T:T2, p:p2, v:v2 }, { id:'3', T:T3, p:p3, v:v3 }, { id:'4', T:T4, p:p4, v:v4 }];
+    return wrap('otto', states, { Qin: Qin_check, Qout, Wnet, eta, PME, k, r });
+  }
+
+  function diesel({ T1, p1, r, k, Qin }) {
+    const v1 = vSpec(T1, p1), v2 = v1 / r, T2 = T1 * Math.pow(r, k - 1), p2 = p1 * Math.pow(r, k);
+    const T3 = T2 + Qin / cp(k), p3 = p2, v3 = R * T3 / p3, rc = v3 / v2;
+    const v4 = v1, T4 = T3 * Math.pow(v3 / v4, k - 1), p4 = p3 * Math.pow(v3 / v4, k);
+    const Qin_check = cp(k) * (T3 - T2), Qout = cv(k) * (T4 - T1);
+    // Rendimiento del ciclo Diesel mediante fórmula analítica cerrada (aire-estándar frío):
+    //         η = 1 − (1 / r_v^(k−1)) · (r_c^k − 1) / (k · (r_c − 1))
+    // donde r_v = V₁/V₂ (relación de compresión) y r_c = V₃/V₂ = T₃/T₂ (relación de corte).
+    const kSafe = Math.max(1.001, k);
+    const eta = 1 - (1 / Math.pow(r, kSafe - 1)) * ((Math.pow(rc, kSafe) - 1) / (kSafe * (rc - 1)));
+    const Wnet = eta * Qin_check, PME = safeDiv(Wnet, v1 - v2);
+    const states = [{ id:'1', T:T1, p:p1, v:v1 }, { id:'2', T:T2, p:p2, v:v2 }, { id:'3', T:T3, p:p3, v:v3 }, { id:'4', T:T4, p:p4, v:v4 }];
+    return wrap('diesel', states, { Qin: Qin_check, Qout, Wnet, eta, PME, k, r, rc });
+  }
+
+  function sabathe({ T1, p1, r, k, Qin, alpha }) {
+    if (alpha < 0 || alpha > 1) throw new Error('α (fracción de Q_v) debe estar entre 0 y 1.');
+    const v1 = vSpec(T1, p1), v2 = v1 / r, T2 = T1 * Math.pow(r, k - 1), p2 = p1 * Math.pow(r, k);
+    const Qv = alpha * Qin, v3 = v2, T3 = T2 + Qv / cv(k), p3 = p2 * (T3 / T2);
+    const Qp = (1 - alpha) * Qin, p4 = p3, T4 = T3 + Qp / cp(k), v4 = R * T4 / p4;
+    const v5 = v1, T5 = T4 * Math.pow(v4 / v5, k - 1), p5 = p4 * Math.pow(v4 / v5, k);
+    const Qin_check = Qv + Qp, Qout = cv(k) * (T5 - T1);
+    const Wnet = Qin_check - Qout, eta = safeDiv(Wnet, Qin_check), PME = safeDiv(Wnet, v1 - v2);
+    const states = [{ id:'1', T:T1, p:p1, v:v1 }, { id:'2', T:T2, p:p2, v:v2 }, { id:'3', T:T3, p:p3, v:v3 }, { id:'4', T:T4, p:p4, v:v4 }, { id:'5', T:T5, p:p5, v:v5 }];
+    return wrap('sabathe', states, { Qin: Qin_check, Qout, Wnet, eta, PME, k, r, alpha });
+  }
+
+  function wrap(type, states, metrics) {
+    const k = metrics.k, T1 = states[0].T, v1 = states[0].v;
+    states.forEach(s => { s.s = sFromT_v(s.T, s.v, k, T1, v1); });
+    const Tmax = Math.max(...states.map(s => s.T)), pmax = Math.max(...states.map(s => s.p));
+    return { type, states, ...metrics, Tmax, pmax, curve: buildCurve(type, states, k) };
+  }
+
+  function buildCurve(type, states, k) {
+    const N = 50, v_ref = states[0].v, T_ref = states[0].T;
+    const sOf = (T, v) => (R / (Math.max(1.001, k) - 1)) * Math.log(T / T_ref) + R * Math.log(v / v_ref);
+    const segs = [];
+
+    function isentropic(a, b) {
+      const pts = [];
+      for (let i = 0; i <= N; i++) {
+        const lnv = Math.log(a.v) + (i/N) * (Math.log(b.v) - Math.log(a.v));
+        const v = Math.exp(lnv), p = a.p * Math.pow(a.v / v, k), T = p * v / R;
+        pts.push({ v, p, T, s: sOf(T, v) });
+      } return pts;
+    }
+    function isochoric(a, b) {
+      const pts = [];
+      for (let i = 0; i <= N; i++) {
+        const T = a.T + (i/N) * (b.T - a.T), v = a.v, p = a.p + (i/N) * (b.p - a.p);
+        pts.push({ v, p, T, s: sOf(T, v) });
+      } return pts;
+    }
+    function isobaric(a, b) {
+      const pts = [];
+      for (let i = 0; i <= N; i++) {
+        const T = a.T + (i/N) * (b.T - a.T), p = a.p, v = R * T / p;
+        pts.push({ v, p, T, s: sOf(T, v) });
+      } return pts;
+    }
+
+    if (type === 'otto') { segs.push(...isentropic(states[0], states[1]), ...isochoric(states[1], states[2]), ...isentropic(states[2], states[3]), ...isochoric(states[3], states[0])); }
+    else if (type === 'diesel') { segs.push(...isentropic(states[0], states[1]), ...isobaric(states[1], states[2]), ...isentropic(states[2], states[3]), ...isochoric(states[3], states[0])); }
+    else if (type === 'sabathe') { segs.push(...isentropic(states[0], states[1]), ...isochoric(states[1], states[2]), ...isobaric(states[2], states[3]), ...isentropic(states[3], states[4]), ...isochoric(states[4], states[0])); }
+    return segs;
+  }
+
+  return { otto, diesel, sabathe, cv, cp };
+})();
+
+/* =====================================================================================
+   MÓDULO GEO
+   ===================================================================================== */
+const GEO = (function () {
+  function totalDisplacement({ P_eff_W, PME_Pa, eta_mec, rpm, x = 2 }) {
+    if (PME_Pa <= 0) throw new Error('PME ≤ 0 — el ciclo no produce trabajo neto.');
+    return P_eff_W / (eta_mec * PME_Pa * ((rpm / 60) / x));
+  }
+  function dimensionCylinders(V_total, r) {
+    const candidates = [4, 6, 8], SoverD = 1.05;
+    const options = candidates.map(N => {
+      const V_unit_m3 = V_total / N, V_unit_cm3 = V_unit_m3 * 1e6;
+      const D_m = Math.cbrt(4 * V_unit_m3 / (Math.PI * SoverD)), S_m = SoverD * D_m;
+      const V_camara_cm3 = (V_unit_m3 / (r - 1)) * 1e6;
+      let suit = 'aceptable';
+      if (V_unit_cm3 < 150) suit = 'cilindrada chica'; else if (V_unit_cm3 > 900) suit = 'cilindrada grande'; else if (V_unit_cm3 >= 250 && V_unit_cm3 <= 700) suit = 'óptima';
+      return { N, V_unit_cm3, D_mm: D_m * 1000, S_mm: S_m * 1000, V_camara_cm3, suit, _delta: Math.abs(V_unit_cm3 - 450) };
+    });
+    return { options, recommended: options.slice().sort((a,b) => a._delta - b._delta)[0], SoverD };
+  }
+  return { totalDisplacement, dimensionCylinders };
+})();
+
+/* =====================================================================================
+   MÓDULO VAL
+   ===================================================================================== */
+const VAL = (function () {
+  const errors = [];
+  function reset() { errors.length = 0; }
+  function add(msg) { errors.push(msg); }
+  function get() { return errors.slice(); }
+  function num(x, name, opts = {}) {
+    if (typeof x !== 'number' || !isFinite(x) || isNaN(x)) throw new Error(`Entrada inválida: ${name} no es un número real.`);
+    if (opts.min !== undefined && x < opts.min) throw new Error(`Entrada inválida: ${name} = ${x} < ${opts.min}.`);
+    if (opts.max !== undefined && x > opts.max) throw new Error(`Entrada inválida: ${name} = ${x} > ${opts.max}.`);
+    return x;
+  }
+  function altitudeToMeters(value, unit) { return unit === 'ft' ? value * 0.3048 : value; }
+  function powerToWatts(value, unit) { return unit === 'HP' ? value * 745.6998715823 : value * 1000; }
+  function checkResult(res, limTmax, limPmax) {
+    const out = [];
+    out.push({ level: 'ok', msg: 'Validación de unidades interna realizada — todos los cálculos en SI (Pa, K, m³, J).' });
+    if (Math.abs(res.Qin) < 1e-6) {
+      out.push({ level: 'info', msg: 'Q<sub>in</sub> = 0 (mezcla φ = 0 ⇒ sin combustible). El ciclo no recibe aporte térmico: los estados 2…n coinciden con los de la curva isentrópica desde 1, no hay trabajo neto y η y PME son nulos. Útil como caso de comprobación de los límites del modelo.' });
+    } else if (Math.abs(res.r - 1) < 1e-9) {
+      out.push({ level: 'info', msg: 'r = 1 (sin compresión): el volumen no cambia entre 1 y 2, el ciclo Otto / Diesel / Sabathé degenera a un calentamiento y enfriamiento a v = cte sin trabajo neto. PME y η son nulos por definición.' });
+    } else {
+      if (res.eta < 0 || res.eta > 1) out.push({ level: 'err', msg: `Rendimiento térmico fuera de rango físico (η = ${res.eta.toFixed(3)}).` });
+      if (res.PME <= 0) out.push({ level: 'err', msg: 'PME no positiva: el ciclo no produce trabajo neto. Revisar relación de compresión y Q<sub>in</sub>.' });
+    }
+    if (res.Tmax > limTmax) { out.push({ level: 'warn', msg: `T<sub>max</sub> = ${res.Tmax.toFixed(0)} K supera el límite configurado (${limTmax} K). Considerar que el modelo frío sobreestima el pico de temperatura.` }); }
+    if (res.pmax / 1e3 > limPmax) { out.push({ level: 'warn', msg: `p<sub>max</sub> = ${(res.pmax/1e3).toFixed(0)} kPa supera el límite configurado (${limPmax} kPa). Considerar reducir r o φ.` }); }
+    return out;
+  }
+  return { reset, add, get, num, altitudeToMeters, powerToWatts, checkResult };
+})();
+
+/* =====================================================================================
+   MÓDULO PLOT
+   ===================================================================================== */
+const PLOT = (function () {
+  if (typeof Plotly !== 'undefined' && Plotly.register) {
+    Plotly.register({
+      moduleType: 'locale', name: 'es-AR',
+      dictionary: { 'Autoscale':'Autoescalar', 'Zoom':'Zoom', 'Download plot as a png':'Descargar gráfico como PNG' },
+      format: { date: '%d/%m/%Y', decimal: ',', thousands: '.', grouping: [3] }
+    });
+  }
+
+  // --- Función de descarga personalizada con tema blanco ---
+  function downloadWhitePlot(gd, baseFilename) {
+    const hiddenDiv = document.createElement('div');
+    hiddenDiv.style.display = 'none';
+    document.body.appendChild(hiddenDiv);
+    const data = JSON.parse(JSON.stringify(gd.data));
+    const layout = JSON.parse(JSON.stringify(gd.layout || {}));
+
+    layout.paper_bgcolor = '#ffffff'; layout.plot_bgcolor = '#ffffff'; layout.font.color = '#0f172a';
+    if(layout.xaxis) { layout.xaxis.gridcolor = '#e2e8f0'; layout.xaxis.linecolor = '#0f172a'; layout.xaxis.tickcolor = '#0f172a'; if(layout.xaxis.title) layout.xaxis.title.font = {color: '#0f172a'}; }
+    if(layout.yaxis) { layout.yaxis.gridcolor = '#e2e8f0'; layout.yaxis.linecolor = '#0f172a'; layout.yaxis.tickcolor = '#0f172a'; if(layout.yaxis.title) layout.yaxis.title.font = {color: '#0f172a'}; }
+    if(layout.legend) { layout.legend.font = {color: '#0f172a'}; layout.legend.bgcolor = 'rgba(255,255,255,0.9)'; layout.legend.bordercolor = '#cbd5e1'; }
+    if(layout.title) layout.title.font = {color: '#0f172a', size: 14, family: 'Manrope'};
+
+    Plotly.newPlot(hiddenDiv, data, layout, {locale: 'es-AR'}).then((newGd) => {
+      Plotly.downloadImage(newGd, { format: 'png', filename: baseFilename, width: 1000, height: 700 }).then(() => {
+        Plotly.purge(newGd); newGd.remove();
+      });
+    });
+  }
+
+  const config = {
+    responsive: true, displayModeBar: true,
+    modeBarButtonsToRemove: ['lasso2d', 'select2d', 'toImage'],
+    modeBarButtonsToAdd: [{
+      name: 'Descargar Gráfico (para informe)',
+      icon: Plotly.Icons.camera,
+      click: function(gd) {
+        const fname = gd.dataset.filename || 'Grafico_Motor';
+        downloadWhitePlot(gd, fname);
+      }
+    }],
+    displaylogo: false, locale: 'es-AR'
+  };
+
+  function baseLayout(xtitle, ytitle, title) {
+    return {
+      title: { text: title || '', font: { color: '#111111', size: 13, family: 'Manrope' }, x: 0.02 },
+      paper_bgcolor: '#f5f5f5', plot_bgcolor:  '#ffffff',
+      font: { family: 'JetBrains Mono', color: '#3d4a5c', size: 11 },
+      xaxis: { title: { text: xtitle, font: { color: '#3d4a5c' }, standoff: 14 }, gridcolor: '#e0e0e0', zerolinecolor: '#d0d5dd', linecolor: '#d0d5dd', tickcolor: '#d0d5dd', automargin: true },
+      yaxis: { title: { text: ytitle, font: { color: '#3d4a5c' }, standoff: 12 }, gridcolor: '#e0e0e0', zerolinecolor: '#d0d5dd', linecolor: '#d0d5dd', tickcolor: '#d0d5dd', automargin: true },
+      hovermode: 'closest', showlegend: true,
+      legend: { font: { color: '#111111' }, bgcolor: 'rgba(255,255,255,0.9)', bordercolor: '#d0d5dd', borderwidth: 1 },
+      margin: { l: 82, r: 60, t: 64, b: 74 }
+    };
+  }
+  function paddedRange(values, frac = 0.08) {
+    const min = Math.min(...values), max = Math.max(...values), span = max - min;
+    return span === 0 || !isFinite(span) ? null : [min - span * frac, max + span * frac];
+  }
+
+  const COLORS = { otto: '#0b3d91', diesel: '#a30000', sabathe: '#5c3d0e' }, NICE = { otto: 'Otto', diesel: 'Diesel', sabathe: 'Sabathé' };
+
+  function pv(divId, result, opts = {}) {
+    const yKpa = result.curve.map(p => p.p / 1e3), xV = result.curve.map(p => p.v);
+    const traceCurve = { x: xV, y: yKpa, mode: 'lines', line: { color: COLORS[result.type], width: 2.5 }, name: NICE[result.type], hovertemplate: 'v = %{x:.4f} m³/kg<br>p = %{y:.1f} kPa<extra></extra>' };
+    const tracePts = { x: result.states.map(s => s.v), y: result.states.map(s => s.p / 1e3), mode: 'markers+text', marker: { color: '#0b3d91', size: 10, symbol: 'circle', line: { color: '#ffffff', width: 1.5 } }, text: result.states.map(s => ` ${s.id}`), textposition: 'top right', textfont: { color: '#0b3d91', size: 13, family: 'JetBrains Mono' }, name: 'Estados', hovertemplate: 'Estado %{text}<br>v = %{x:.4f} m³/kg<br>p = %{y:.1f} kPa<extra></extra>' };
+    const layout = baseLayout('Volumen específico v [m³/kg]', 'Presión p [kPa]', `Ciclo ${NICE[result.type]} — diagrama p-v`);
+    const rx = paddedRange(xV); if (rx) layout.xaxis.range = rx;
+    const ry = paddedRange(yKpa); if (ry) layout.yaxis.range = ry;
+    document.getElementById(divId).dataset.filename = `Diagrama_pv_${result.type}_r${result.r.toFixed(1)}_${opts.fuelName || ''}`;
+    Plotly.newPlot(divId, [traceCurve, tracePts], layout, config);
+  }
+
+  function ts(divId, result, opts = {}) {
+    const xS = result.curve.map(p => p.s / 1000), yT = result.curve.map(p => p.T);
+    const traceCurve = { x: xS, y: yT, mode: 'lines', line: { color: COLORS[result.type], width: 2.5 }, name: NICE[result.type], hovertemplate: 's = %{x:.3f} kJ/(kg·K)<br>T = %{y:.1f} K<extra></extra>' };
+    const tracePts = { x: result.states.map(s => s.s / 1000), y: result.states.map(s => s.T), mode: 'markers+text', marker: { color: '#0b3d91', size: 10, symbol: 'circle', line: { color: '#ffffff', width: 1.5 } }, text: result.states.map(s => ` ${s.id}`), textposition: 'top right', textfont: { color: '#0b3d91', size: 13, family: 'JetBrains Mono' }, name: 'Estados', hovertemplate: 'Estado %{text}<br>s = %{x:.3f} kJ/(kg·K)<br>T = %{y:.1f} K<extra></extra>' };
+    const layout = baseLayout('Entropía relativa s − s₁ [kJ/(kg·K)]', 'Temperatura T [K]', `Ciclo ${NICE[result.type]} — diagrama T-s`);
+    const rx = paddedRange(xS); if (rx) layout.xaxis.range = rx;
+    const ry = paddedRange(yT); if (ry) layout.yaxis.range = ry;
+    document.getElementById(divId).dataset.filename = `Diagrama_ts_${result.type}_r${result.r.toFixed(1)}_${opts.fuelName || ''}`;
+    Plotly.newPlot(divId, [traceCurve, tracePts], layout, config);
+  }
+
+  function sweepR(opts) {
+    const { type, T1, p1, k, Qin, alpha } = opts, rs = [], etas = [], pmes = [], tmaxs = [];
+    for (let r = 4; r <= 22.001; r += 0.25) {
+      try {
+        let res;
+        if (type === 'otto') res = CICLO.otto({ T1, p1, r, k, Qin });
+        if (type === 'diesel') res = CICLO.diesel({ T1, p1, r, k, Qin });
+        if (type === 'sabathe') res = CICLO.sabathe({ T1, p1, r, k, Qin, alpha });
+        if(res.PME > 0 && res.eta <= 1) { rs.push(r); etas.push(res.eta * 100); pmes.push(res.PME / 1e3); tmaxs.push(res.Tmax); }
+      } catch(e) {}
+    }
+    return { rs, etas, pmes, tmaxs };
+  }
+
+  function paramPlot(divId, sweep, currentR, currentVal, varName, ylabel, title, opts={}) {
+    const trace = { x: sweep.rs, y: sweep[varName], mode: 'lines', line: { color: '#1a5fb4', width: 2.5 }, name: ylabel, hovertemplate: 'r = %{x:.2f}<br>' + ylabel + ' = %{y:.2f}<extra></extra>' };
+    const marker = { x: [currentR], y: [currentVal], mode: 'markers', marker: { color: '#0b3d91', size: 12, symbol: 'circle', line: { color: '#ffffff', width: 2 } }, name: 'r actual', hovertemplate: 'r = %{x:.2f}<br>' + ylabel + ' = %{y:.2f}<extra></extra>' };
+    const layout = baseLayout('Relación de compresión r', ylabel, title);
+    const rx = paddedRange(sweep.rs); if (rx) layout.xaxis.range = rx;
+    const ry = paddedRange(sweep[varName]); if (ry) layout.yaxis.range = ry;
+    document.getElementById(divId).dataset.filename = `Parametrico_${ylabel.split(' ')[0]}_vs_r_${opts.type}`;
+    Plotly.newPlot(divId, [trace, marker], layout, config);
+  }
+
+  function compare(divIdPV, divIdTS, results, inp) {
+    const tracesPV = results.map(r => ({ x: r.curve.map(p => p.v), y: r.curve.map(p => p.p / 1e3), mode: 'lines', line: { color: COLORS[r.type], width: 2.5 }, name: NICE[r.type] + ` (r=${r.r.toFixed(1)})`, hovertemplate: NICE[r.type] + '<br>v = %{x:.4f} m³/kg<br>p = %{y:.1f} kPa<extra></extra>' }));
+    const tracesTS = results.map(r => ({ x: r.curve.map(p => p.s / 1000), y: r.curve.map(p => p.T), mode: 'lines', line: { color: COLORS[r.type], width: 2.5 }, name: NICE[r.type] + ` (r=${r.r.toFixed(1)})`, hovertemplate: NICE[r.type] + '<br>s = %{x:.3f} kJ/(kg·K)<br>T = %{y:.1f} K<extra></extra>' }));
+    const allV = results.flatMap(r => r.curve.map(p => p.v)), allP = results.flatMap(r => r.curve.map(p => p.p / 1e3)), allS = results.flatMap(r => r.curve.map(p => p.s / 1000)), allT = results.flatMap(r => r.curve.map(p => p.T));
+    const layPV = baseLayout('v [m³/kg]', 'p [kPa]', 'Comparación p-v'), layTS = baseLayout('s − s₁ [kJ/(kg·K)]', 'T [K]', 'Comparación T-s');
+    const rxV = paddedRange(allV); if (rxV) layPV.xaxis.range = rxV;
+    const ryP = paddedRange(allP); if (ryP) layPV.yaxis.range = ryP;
+    const rxS = paddedRange(allS); if (rxS) layTS.xaxis.range = rxS;
+    const ryT = paddedRange(allT); if (ryT) layTS.yaxis.range = ryT;
+    
+    document.getElementById(divIdPV).dataset.filename = `Comparacion_pv_Otto${inp.rOtto}_Diesel${inp.rDiesel}_Sab${inp.rSabathe}`;
+    document.getElementById(divIdTS).dataset.filename = `Comparacion_ts_Otto${inp.rOtto}_Diesel${inp.rDiesel}_Sab${inp.rSabathe}`;
+    
+    Plotly.newPlot(divIdPV, tracesPV, layPV, config);
+    Plotly.newPlot(divIdTS, tracesTS, layTS, config);
+  }
+
+  return { pv, ts, sweepR, paramPlot, compare };
+})();
+
+/* =====================================================================================
+   MÓDULO UI
+   ===================================================================================== */
+const UI = (function () {
+  const $ = (id) => document.getElementById(id);
+  const toComma = (s) => String(s).replace('.', ',');
+  const fmt = (x, d = 2) => (x === null || x === undefined || isNaN(x)) ? '—' : toComma(Number(x).toFixed(d));
+
+  function readInputs() {
+    const altVal = parseFloat($('inAltitud').value), altUnit = $('inAltitudUnit').value;
+    const potVal = parseFloat($('inPot').value), potUnit = $('inPotUnit').value;
+    const fuel = $('inFuel').value, phi  = parseFloat($('inPhi').value);
+    const rOtto = parseFloat($('inR_otto').value), rDiesel = parseFloat($('inR_diesel').value), rSabathe = parseFloat($('inR_sabathe').value);
+    const k = parseFloat($('inK').value), alpha = parseFloat($('inAlpha').value), etaM = parseFloat($('inEtaMec').value);
+    const rpm = parseFloat($('inRPM').value), limT = parseFloat($('inLimT').value), limP = parseFloat($('inLimP').value);
+    const ciclo = document.querySelector('input[name="ciclo"]:checked').value;
+    const nCyl = 4; // Configuración fija: el motor siempre se predimensiona con 4 cilindros (la pestaña Geometría muestra además la comparativa 4/6/8 a título informativo).
+
+    VAL.num(altVal, 'altitud', { min: 0, max: 65617 });
+    VAL.num(potVal, 'potencia', { min: 0.1, max: 5000 });
+    VAL.num(phi, 'φ', { min: 0, max: 1.5 });
+    VAL.num(rOtto, 'r (Otto)', { min: 1, max: 25 });
+    VAL.num(rDiesel, 'r (Diesel)', { min: 1, max: 25 });
+    VAL.num(rSabathe, 'r (Sabathé)', { min: 1, max: 25 });
+    VAL.num(k, 'k', { min: 1.0, max: 1.7 });
+    VAL.num(etaM, 'η_mec', { min: 0.5, max: 1.0 });
+    VAL.num(rpm, 'RPM', { min: 500, max: 8000 });
+    VAL.num(limT, 'Tmax_lim', { min: 200 });
+    VAL.num(limP, 'pmax_lim', { min: 100 });
+
+    const altM = VAL.altitudeToMeters(altVal, altUnit), potW = VAL.powerToWatts(potVal, potUnit);
+    const rByCycle = { otto: rOtto, diesel: rDiesel, sabathe: rSabathe }, r = rByCycle[ciclo];
+    return { altVal, altUnit, altM, potVal, potUnit, potW, fuel, phi, rOtto, rDiesel, rSabathe, r, rByCycle, k, alpha, etaM, rpm, limT, limP, ciclo, nCyl };
+  }
+
+  // --- Helper: Calcula el r mínimo numéricamente para que v3 <= v1 ---
+  function getMinRDiesel(Qin, T1, k) {
+    if (Qin <= 0) return 1;
+    const kSafe = Math.max(1.001, k);
+    const cpVal = kSafe * 287.05287 / (kSafe - 1);
+    const C = Qin / (cpVal * T1);
+    let low = 1.0, high = 200.0;
+    for (let i = 0; i < 40; i++) {
+      let mid = (low + high) / 2;
+      if ((Math.pow(mid, kSafe) - Math.pow(mid, kSafe - 1)) > C) high = mid; else low = mid;
+    }
+    return Math.ceil(low * 10) / 10;
+  }
+
+  function renderAlerts(alerts) {
+    const el = $('alerts'); el.innerHTML = '';
+    alerts.forEach(a => {
+      const div = document.createElement('div'); div.className = `alert ${a.level}`;
+      const span = document.createElement('span'); span.className = 'alert-msg'; span.innerHTML = a.msg;
+      div.appendChild(span); el.appendChild(div);
+    });
+  }
+
+  function tableHTML(headers, rows) {
+    let h = '<table><thead><tr>'; headers.forEach(c => h += `<th>${c}</th>`); h += '</tr></thead><tbody>';
+    rows.forEach(r => { h += '<tr>'; r.forEach((c, i) => { h += `<td class="${i > 0 ? 'num' : ''}">${c}</td>`; }); h += '</tr>'; });
+    return h += '</tbody></table>';
+  }
+
+  function renderISA(isa, altM, altVal, altUnit) {
+    $('isaTable').innerHTML = tableHTML(['Magnitud','Valor'], [
+      ['Altitud (entrada)', `${altVal} ${altUnit}`], ['Altitud (SI)', `${fmt(altM,1)} m`],
+      ['Temperatura T₁', `${fmt(isa.T,2)} K`], ['Presión p₁', `${fmt(isa.p,0)} Pa`],
+      ['Densidad ρ₁', `${fmt(isa.rho,4)} kg/m³`], ['v específico v₁', `${fmt(287.05*isa.T/isa.p,4)} m³/kg`]
+    ]);
+  }
+
+  function renderQin(q, phi) {
+    $('qinTable').innerHTML = tableHTML(['Magnitud','Valor'], [
+      ['Combustible', `${q.fuel.formula} — ${q.fuel.name}`], ['PCI', `${fmt(q.fuel.PCI/1000,2)} MJ/kg`],
+      ['AFR estequiométrica', `${fmt(q.AFR_stoich,3)} kg/kg`], ['φ', `${fmt(phi,3)}  → ${q.mixtureType}`],
+      ['AFR real', `${fmt(q.AFR_actual,3)} kg/kg`], ['Q_in', `${fmt(q.Qin_kJkg,1)} kJ/kg`]
+    ]);
+  }
+
+  function renderStates(res) {
+    $('statesTable').innerHTML = tableHTML(['Estado', 'T [K]', 'p [kPa]', 'v [m³/kg]', 's − s₁ [kJ/(kg·K)]'],
+      res.states.map(s => [s.id, fmt(s.T, 2), fmt(s.p / 1e3, 1), fmt(s.v, 4), fmt(s.s / 1000, 4)])
+    );
+  }
+
+  function renderEnergy(res) {
+    const cv = CICLO.cv(res.k), cp = CICLO.cp(res.k);
+    $('energyTable').innerHTML = tableHTML(['Magnitud','Valor'], [
+      ['k = c_p / c_v', `${fmt(res.k,3)}`], ['c_v', `${fmt(cv,1)} J/(kg·K)`], ['c_p', `${fmt(cp,1)} J/(kg·K)`],
+      ['Q_in', `${fmt(res.Qin/1000,1)} kJ/kg`], ['Q_out', `${fmt(res.Qout/1000,1)} kJ/kg`],
+      ['W_neto', `${fmt(res.Wnet/1000,1)} kJ/kg`], ['η térmico', `${fmt(res.eta*100,2)} %`],
+      ['PME', `${fmt(res.PME/1e3,1)} kPa`], ['T máxima', `${fmt(res.Tmax,1)} K`], ['p máxima', `${fmt(res.pmax/1e3,1)} kPa`]
+    ]);
+  }
+
+  function renderResumen(res, inp, q, isa, geo) {
+    $('content-resumen').style.display = 'block'; $('empty-resumen').style.display = 'none';
+    const tag = $('rCiclo'); tag.className = 'cycle-tag ' + res.type; tag.textContent = res.type.toUpperCase();
+    $('rFuel').textContent = q.fuel.formula; $('rAlt').textContent  = `${inp.altVal} ${inp.altUnit}`;
+    $('rEta').innerHTML  = `${fmt(res.eta*100,2)}<span class="unit">%</span>`; $('rPME').innerHTML  = `${fmt(res.PME/1e3,1)}<span class="unit">kPa</span>`;
+    $('rTmax').innerHTML = `${fmt(res.Tmax,0)}<span class="unit">K</span>`; $('rPmax').innerHTML = `${fmt(res.pmax/1e3,0)}<span class="unit">kPa</span>`;
+    $('rWnet').innerHTML = `${fmt(res.Wnet/1000,1)}<span class="unit">kJ/kg</span>`; $('rQin').innerHTML  = `${fmt(res.Qin/1000,1)}<span class="unit">kJ/kg</span>`;
+    $('rQout').innerHTML = `${fmt(res.Qout/1000,1)}<span class="unit">kJ/kg</span>`; $('rPCI').innerHTML  = `${fmt(q.fuel.PCI/1000,1)}<span class="unit">MJ/kg</span>`;
+    const sel = geo.options.find(o => o.N === inp.nCyl) || geo.options[0];
+    $('rVtot').innerHTML = `${fmt(geo.V_total*1e6,1)}<span class="unit">cm³</span>`; $('rNcyl').textContent = sel.N;
+    $('rDxS').textContent  = `Ø ${fmt(sel.D_mm,1)} × ${fmt(sel.S_mm,1)} mm`;
+  }
+
+  function renderGeometry(geo, res, inp) {
+    const sel = geo.options.find(o => o.N === inp.nCyl) || geo.options[0];
+    const rowsOpt = geo.options.map(o => [o.N, fmt(o.V_unit_cm3,1), fmt(o.D_mm,2), fmt(o.S_mm,2), fmt(o.V_camara_cm3,2)]);
+    $('geoTable').innerHTML = tableHTML(['Magnitud','Valor'], [
+      ['Cilindrada total V_total', `${fmt(geo.V_total*1e6,2)} cm³`], ['S/D adoptada', `${fmt(geo.SoverD,2)}`],
+      ['Nº de cilindros (elegido)', `${sel.N} cilindros`], ['Diámetro D', `${fmt(sel.D_mm,2)} mm`],
+      ['Carrera S', `${fmt(sel.S_mm,2)} mm`], ['Vol. unitario', `${fmt(sel.V_unit_cm3,2)} cm³`],
+      ['Vol. cámara', `${fmt(sel.V_camara_cm3,2)} cm³`]
+    ]) + '<h3 style="margin-top:18px;">Comparativa 4 / 6 / 8 cilindros</h3>' + tableHTML(['Nº cil', 'V_unit [cm³]', 'D [mm]', 'S [mm]', 'V_cámara [cm³]'], rowsOpt);
+  }
+
+  function renderComparison(comp, inp) {
+    const fmtB = (r) => `η = ${fmt(r.eta*100,2)} %<br>PME = ${fmt(r.PME/1e3,1)} kPa<br>T<sub>max</sub> = ${fmt(r.Tmax,0)} K<br>p<sub>max</sub> = ${fmt(r.pmax/1e3,0)} kPa<br>W<sub>neto</sub> = ${fmt(r.Wnet/1000,1)} kJ/kg<br><span style="color:var(--txt-2); font-size:11px;">r = ${fmt(r.r,1)}</span>`;
+    $('cmpOtto').innerHTML = fmtB(comp.otto); $('cmpDiesel').innerHTML = fmtB(comp.diesel); $('cmpSabathe').innerHTML = fmtB(comp.sabathe);
+    PLOT.compare('plotCmpPV', 'plotCmpTS', [comp.otto, comp.diesel, comp.sabathe], inp);
+  }
+
+  function expandPlot(divId) {
+    const map = { plotPV:'Diagrama p-v', plotTS:'Diagrama T-s', plotPEta:'η vs r', plotPPME:'PME vs r', plotPTmax:'Tmax vs r', plotCmpPV:'Comparación p-v', plotCmpTS:'Comparación T-s' };
+    $('modalTitle').textContent = map[divId] || 'Gráfico'; $('modal').classList.add('active');
+    const sEl = $(divId), data = sEl.data, lay = JSON.parse(JSON.stringify(sEl.layout || {})); lay.height = lay.width = null;
+    Plotly.newPlot('modalPlot', data, lay, { responsive: true, displaylogo: false, locale: 'es-AR', modeBarButtonsToRemove: ['lasso2d','select2d'] });
+  }
+  function closeModal() { $('modal').classList.remove('active'); Plotly.purge('modalPlot'); }
+
+  const THUMB_W = 14;
+  function thumbCenterX(slider, val) {
+    const r = slider.getBoundingClientRect(), min = +slider.min, max = +slider.max;
+    return max === min ? r.left + r.width / 2 : r.left + THUMB_W / 2 + (val - min) / (max - min) * (r.width - THUMB_W);
+  }
+  function attachStepClick(slider) {
+    let downX = null, downVal = null, dOnThumb = false;
+    slider.addEventListener('pointerdown', (e) => {
+      const val = parseFloat(slider.value), cx = thumbCenterX(slider, val); dOnThumb = Math.abs(e.clientX - cx) <= THUMB_W / 2 + 4;
+      downX = e.clientX; downVal = val;
+      if (dOnThumb) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      const st = parseFloat(slider.step) || 1; let nV = val + ((e.clientX > cx) ? 1 : -1) * st;
+      nV = Math.max(+slider.min, Math.min(+slider.max, parseFloat(nV.toFixed((slider.step.split('.')[1] || '').length))));
+      if (nV !== val) { slider.value = nV; slider.dispatchEvent(new Event('input', { bubbles: true })); }
+    }, true);
+    const fin = (e) => {
+      if (downX !== null && Math.abs(e.clientX - downX) < 5 && !dOnThumb) {
+        const tgt = downVal + ((downX > thumbCenterX(slider, downVal)) ? 1 : -1) * (parseFloat(slider.step) || 1);
+        let fn = Math.max(+slider.min, Math.min(+slider.max, parseFloat(tgt.toFixed((slider.step.split('.')[1] || '').length))));
+        if (Math.abs(parseFloat(slider.value) - fn) > 1e-12) { slider.value = fn; slider.dispatchEvent(new Event('input', { bubbles: true })); }
+      }
+      downX = null;
+    };
+    slider.addEventListener('pointerup', fin); slider.addEventListener('pointercancel', () => downX = null); slider.addEventListener('pointerleave', (e) => { if (downX !== null) fin(e); });
+  }
+
+  function setupSliders() {
+    const map = [
+      ['inPhi', 'dPhi', 2], ['inR_otto', 'dR_otto', 1], ['inR_diesel', 'dR_diesel', 1],
+      ['inR_sabathe', 'dR_sabathe', 1], ['inK', 'dK', 2], ['inAlpha', 'dAlpha', 2], ['inEtaMec', 'dEtaMec', 2]
+    ];
+    map.forEach(([idS, idI, d]) => {
+      const s = $(idS), i = $(idI); if (!s || !i) return;
+      const uFS = () => i.value = parseFloat(s.value).toFixed(d);
+      s.addEventListener('input', uFS); s.addEventListener('change', uFS);
+      const uFI = () => {
+        let v = parseFloat(i.value); if (isNaN(v)) return;
+        v = Math.max(+s.min, Math.min(+s.max, v)); s.value = v; i.value = v.toFixed(d);
+        scheduleRecalc();
+      };
+      i.addEventListener('change', uFI); attachStepClick(s); uFS();
+    });
+
+    const updC = () => {
+      const c = document.querySelector('input[name="ciclo"]:checked').value;
+      $('fldAlpha').style.display = (c === 'sabathe') ? '' : 'none';
+      ['otto','diesel','sabathe'].forEach(cy => $('rowR_' + cy).classList.toggle('active', cy === c));
+    };
+    document.querySelectorAll('input[name="ciclo"]').forEach(r => r.addEventListener('change', updC)); updC();
+  }
+
+  function calcular() {
+    let inp; try { inp = readInputs(); } catch (e) { renderAlerts([{ level:'err', msg: e.message }]); return; }
+    try {
+      const isa = ATM.isa(inp.altM), q = COMB.qIn(inp.fuel, inp.phi);
+      
+      // Aplicar límite dinámico a Diesel para asegurar que termine combustión v3 <= v1
+      const rMinD = getMinRDiesel(q.Qin, isa.T, inp.k);
+      const sliderD = $('inR_diesel'), inputD = $('dR_diesel');
+      sliderD.min = rMinD; inputD.min = rMinD;
+      let clampedD = false;
+      if (inp.rDiesel < rMinD) {
+        inp.rDiesel = rMinD; sliderD.value = rMinD; inputD.value = rMinD.toFixed(1);
+        if (inp.ciclo === 'diesel') { inp.r = rMinD; clampedD = true; }
+      }
+
+      const cArgs = { T1: isa.T, p1: isa.p, r: inp.r, k: inp.k, Qin: q.Qin };
+      let res;
+      if (inp.ciclo === 'otto') res = CICLO.otto(cArgs);
+      else if (inp.ciclo === 'diesel') res = CICLO.diesel(cArgs);
+      else res = CICLO.sabathe({ ...cArgs, alpha: inp.alpha });
+
+      const V_total = GEO.totalDisplacement({ P_eff_W: inp.potW, PME_Pa: res.PME, eta_mec: inp.etaM, rpm: inp.rpm });
+      const geo = { V_total, ...GEO.dimensionCylinders(V_total, inp.r) };
+
+      const compare = { otto: CICLO.otto({ ...cArgs, r: inp.rOtto }), diesel: CICLO.diesel({ ...cArgs, r: inp.rDiesel }), sabathe: CICLO.sabathe({ ...cArgs, r: inp.rSabathe, alpha: inp.alpha }) };
+      const sweep = PLOT.sweepR({ type: inp.ciclo, T1: isa.T, p1: isa.p, k: inp.k, Qin: q.Qin, alpha: inp.alpha });
+
+      const alerts = VAL.checkResult(res, inp.limT, inp.limP);
+      if (clampedD && inp.ciclo === 'diesel') alerts.push({ level: 'warn', msg: `Relación de compresión mínima para Diesel ajustada dinámicamente a r = ${rMinD} por límite físico del volumen de cilindro.` });
+      renderAlerts(alerts);
+
+      renderISA(isa, inp.altM, inp.altVal, inp.altUnit); renderQin(q, inp.phi); renderStates(res); renderEnergy(res);
+      renderResumen(res, inp, q, isa, geo); renderGeometry(geo, res, inp); renderComparison(compare, inp);
+
+      const fN = q.fuel.name;
+      PLOT.pv('plotPV', res, { fuelName: fN }); PLOT.ts('plotTS', res, { fuelName: fN });
+      PLOT.paramPlot('plotPEta', sweep, inp.r, res.eta*100, 'etas', 'η [%]', 'Rend. térmico', {type: inp.ciclo});
+      PLOT.paramPlot('plotPPME', sweep, inp.r, res.PME/1e3, 'pmes', 'PME [kPa]', 'Presión media', {type: inp.ciclo});
+      // Para los ciclos Diesel y Sabathé, el gráfico Tmax vs r se limita a r > 7
+      // (en esos ciclos los valores de r operativos reales son siempre superiores a 7).
+      const sweepTmax = (inp.ciclo === 'diesel' || inp.ciclo === 'sabathe')
+        ? (() => {
+            const idx = sweep.rs.map((r, i) => r > 7 ? i : -1).filter(i => i >= 0);
+            return { rs: idx.map(i => sweep.rs[i]), etas: idx.map(i => sweep.etas[i]), pmes: idx.map(i => sweep.pmes[i]), tmaxs: idx.map(i => sweep.tmaxs[i]) };
+          })()
+        : sweep;
+      PLOT.paramPlot('plotPTmax', sweepTmax, inp.r, res.Tmax, 'tmaxs', 'Tmax [K]', 'Temperatura max', {type: inp.ciclo});
+
+    } catch (e) { renderAlerts([{ level: 'err', msg: `Error en cálculo: ${e.message}` }]); console.error(e); }
+  }
+
+  let rPend = false;
+  function scheduleRecalc() {
+    if (rPend) return; rPend = true;
+    setTimeout(() => { rPend = false; try { calcular(); } catch(e) { console.error(e); } }, 0);
+  }
+
+  function init() {
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = btn.dataset.tab;
+        document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.dataset.tab === t));
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+      });
+    });
+    setupSliders();
+    $('btnReadme').addEventListener('click', () => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([README.text()], {type:'text/plain'})); a.download = 'README_motor_alternativo.txt'; a.click();
+    });
+    $('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); }); document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    ['inAltitud', 'inAltitudUnit', 'inPot', 'inPotUnit', 'inFuel', 'inPhi', 'inR_otto', 'inR_diesel', 'inR_sabathe', 'inK', 'inAlpha', 'inEtaMec', 'inRPM', 'inLimT', 'inLimP'].forEach(id => {
+      const el = $(id); if(el) { el.addEventListener('input', scheduleRecalc); el.addEventListener('change', scheduleRecalc); }
+    });
+    document.querySelectorAll('input[name="ciclo"]').forEach(r => r.addEventListener('change', scheduleRecalc));
+
+    calcular();
+  }
+
+  return { init, expandPlot, closeModal, calcular };
+})();
+
+/* =====================================================================================
+   MÓDULO README
+   ===================================================================================== */
+const README = (function () {
+  function text() {
+    return `=====================================================================
+  README — Predimensionamiento de Motores Alternativos Aeronáuticos
+  Aplicación web · Modelo Aire-Estándar Frío · Atmósfera ISA
+=====================================================================
+
+OBJETIVO
+--------
+Calcular y comparar los ciclos termodinámicos ideales Otto, Diesel y
+Sabathé bajo una misión aeronáutica dada (altitud, potencia, combustible
+y mezcla), y dimensionar coherentemente la geometría del motor (cilin-
+drada total, diámetro y carrera del pistón) para un motor de 4 cilindros.
+La pestaña Geometría incluye además, a título informativo, la compara-
+tiva de las soluciones equivalentes con 4, 6 y 8 cilindros.
+
+CONFIGURACIÓN INICIAL POR DEFECTO
+---------------------------------
+Al abrir la aplicación los parámetros parten de los siguientes valores:
+   · Ciclo                : Sabathé
+   · r (Otto)             : 8.0
+   · r (Diesel)           : 18.0
+   · r (Sabathé)          : 12.0
+   · k                    : 1.40
+   · α (frac. Q a v=cte)  : 0.50
+   · φ                    : 0.97
+   · Combustible          : n-Heptano (C7H16)
+   · Rendimiento mecánico : 0.85
+   · RPM                  : 2700
+   · Nº de cilindros      : 4 (fijo, no editable)
+   · Tmax permitida       : 4200 K
+   · pmax permitida       : 10000 kPa (100 bar)
+
+CÓMO EJECUTAR
+-------------
+1) Abrir el archivo .html en cualquier navegador moderno (Chrome, Firefox,
+   Edge, Safari). No requiere instalación, ni servidor, ni dependencias
+   locales — sólo conexión a internet la PRIMERA vez para cargar Plotly y
+   las tipografías desde CDN.
+2) Configurar los parámetros de misión y ciclo en el panel de la izquierda.
+3) Los resultados se actualizan AUTOMÁTICAMENTE en cuanto cambia cualquier
+   entrada (no hay botón "Calcular": todo es reactivo, recalculando una
+   vez por frame para mantener la UI fluida).
+4) Navegar entre las pestañas para ver:
+     · Resumen
+     · Estados Termodinámicos
+     · Diagramas p-v / T-s
+     · Análisis Paramétrico (η, PME, Tmax vs r)
+     · Comparación de Ciclos
+     · Geometría del Motor
+5) Hacer clic en "⤢ Expandir" sobre cualquier gráfico para verlo en grande.
+6) Hover sobre las curvas: aparecen las coordenadas (sólo sobre la línea
+   trazada — no sobre áreas vacías).
+
+ENTRADAS
+--------
+A) Misión:
+   · Altitud de operación        [ft o m]    selector de unidad
+   · Potencia efectiva requerida [HP o kW]   selector de unidad
+   · Combustible (6 hidrocarburos puros, por defecto n-Heptano).
+   · Relación de mezcla relativa φ = (F/A)/(F/A)_estequ.   [0 a 1,4]
+     ·· φ = 0 representa el caso límite "sin combustible" (Q_in = 0):
+        no hay aporte térmico, el ciclo es degenerado y se emite una
+        alerta informativa.
+B) Parámetros del ciclo:
+   · Tipo de ciclo               [Otto | Diesel | Sabathé]
+                                 (predeterminado: Sabathé)
+   · TRES relaciones de compresión, una por ciclo (r_Otto, r_Diesel,
+     r_Sabathé), cada una entre 1 y 22 (o 25 para Diesel). Esto permite
+     comparar los tres ciclos cada uno operando en su rango de r realista.
+     Para el ciclo Diesel, el r mínimo es dinámico y se calcula para
+     garantizar que la combustión ocurra antes del PMI.
+   · Coeficiente k = cp/cv       [1,0 a 1,7]
+   · Si Sabathé: fracción α de Q_in a v=cte    [0..1]
+C) Hipótesis mecánicas:
+   · Rendimiento mecánico η_m    [0,70 a 1,00]   default 0,85
+   · RPM nominal del motor       [valor numérico]
+   · Nº de cilindros             FIJO en 4 (no es editable). La pestaña
+     Geometría muestra los tres tamaños 4/6/8 sólo como referencia
+     comparativa.
+D) Límites de seguridad (configurables):
+   · Tmax permitida (default 4200 K)
+   · pmax permitida (default 10000 kPa = 100 bar)
+
+COMBUSTIBLES DISPONIBLES
+------------------------
+La estequiometría usa la reacción genérica para cualquier hidrocarburo:
+    CxHy + (x + y/4) O2  →  x CO2 + (y/2) H2O
+con aire de 23,2% másico de O2. AFR_real = AFR_estequ / φ.
+
+   Familia      Fórmula   Nombre        PCI [kJ/kg]
+   ──────────   ───────   ───────────   ────────────
+   Alcanos      C6H14     n-Hexano      44750
+                C7H16     n-Heptano     44560   (predeterminado)
+                C8H18     Octano        44400
+                C10H22    Decano        44240
+   Aromáticos   C6H6      Benceno       40140
+                C7H8      Tolueno       40520
+
+Las propiedades vienen de NIST WebBook, Engineering Toolbox y Perry's
+Chemical Engineers' Handbook (8ª ed.).
+
+HIPÓTESIS DEL MODELO
+--------------------
+1) Fluido de trabajo: gas ideal (aire).
+2) Procesos internamente reversibles e idealizados.
+3) Calores específicos constantes (modelo aire-estándar FRÍO).
+4) k = 1,40 ; R = 287 J/(kg·K) por defecto (ajustables).
+5) Combustión = aporte de calor equivalente Q_in calculado a partir del
+   PCI del combustible y la relación de mezcla.
+6) Condiciones de entrada: atmósfera ISA en la altitud indicada.
+
+CÁLCULO DEL RENDIMIENTO TÉRMICO
+-------------------------------
+Las expresiones empleadas para η en cada ciclo son las siguientes:
+
+   Otto      η = 1 − 1 / r^(k−1)
+             (balance de energía equivalente: η = 1 − Q_out/Q_in,
+              con Q_in = cv·(T3−T2) y Q_out = cv·(T4−T1)).
+
+   Diesel    η = 1 − (1 / r_v^(k−1)) · (r_c^k − 1) / [k · (r_c − 1)]
+             donde r_v = V1/V2 (relación de compresión)
+                   r_c = V3/V2 = T3/T2 (relación de corte).
+             Esta fórmula cerrada es algebraicamente equivalente al
+             balance Q_in = cp·(T3−T2), Q_out = cv·(T4−T1) (la
+             aplicación calcula los estados por balance y obtiene η
+             por la fórmula cerrada; verificadas idénticas hasta el
+             error de coma flotante IEEE 754).
+
+   Sabathé   η = 1 − Q_out / Q_in
+             con Q_in = α·Q_in_total + (1−α)·Q_in_total partido en
+             aporte a v=cte (2→3) y a p=cte (3→4), y
+             Q_out = cv·(T5−T1).
+
+SALIDAS
+-------
+Termodinámicas:
+  · Condiciones de entrada (T, p, ρ, v) según ISA.
+  · PCI del combustible y Q_in equivalente.
+  · Estados (T, p, v, s) en cada punto del ciclo seleccionado.
+  · Calores intercambiados (Q_in, Q_out) y trabajo neto W_neto.
+  · Rendimiento térmico η.
+  · Presión media efectiva PME [kPa].
+  · Temperatura y presión máximas (Tmax [K], pmax [kPa]).
+
+Geométricas:
+  · Cilindrada total V_total para la potencia efectiva.
+  · Geometría del motor: 4 cilindros (configuración fija de la app).
+  · Cilindrada unitaria, diámetro y carrera (S/D ≈ 1,05).
+  · Volumen de cámara de combustión Vc = Vd / (r-1).
+  · Tabla comparativa con los valores que tendría el motor con 4, 6
+    u 8 cilindros, a título informativo (no afecta el dimensionamiento).
+
+Gráficas (interactivas, con tooltip de coordenadas):
+  · Diagrama p-v del ciclo seleccionado.
+  · Diagrama T-s del ciclo seleccionado.
+  · η, PME y Tmax en función de r.
+    En los gráficos Tmax vs r de los ciclos Diesel y Sabathé el
+    eje horizontal se restringe a r > 7 (rango operativo realista
+    de los ciclos por compresión). El gráfico de Otto conserva
+    todo el barrido r ∈ [4, 22].
+  · Comparación visual de los tres ciclos en p-v y T-s.
+  · Botón de cámara fotográfica para exportar gráfico con fondo blanco.
+
+ORGANIZACIÓN DE LAS PANTALLAS
+-----------------------------
+· Barra superior   : título y botón de descarga del README.
+· Sidebar (izq.)   : todas las entradas (sin botón Calcular: auto-recalc).
+  Los nombres de los parámetros incluyen tooltips explicativos (hover).
+· Workspace (der.) : 6 pestañas con resultados (resumen → geometría).
+· Panel de alertas : mensajes ✓ (OK) / ▲ (warn) / ✗ (error) / i (info).
+· Modal de gráficos: al hacer clic en "Expandir".
+
+CONTROLES INTERACTIVOS
+----------------------
+· Sliders para φ, r (×3 ciclos), k, α, η_mec.
+  IMPORTANTE — comportamiento dual de los sliders:
+    - Click + arrastre sobre el thumb: movimiento continuo.
+    - Click sobre la pista: incrementa UN paso en esa dirección.
+  Los valores numéricos a la derecha de los sliders son *inputs
+  editables*: se puede escribir directamente el número deseado.
+· Selectores de combustible (6 opciones), ciclo (3 opciones) y
+  unidades (altitud: ft/m, potencia: HP/kW).
+· Tooltips en todas las etiquetas del panel lateral: dejá el mouse
+  arriba para ver descripciones conceptuales.
+· Botón de descarga de gráficos en la barra flotante de Plotly
+  adaptado para generar imágenes con fondo blanco aptas para informes.
+
+ESTRUCTURA DEL CÓDIGO
+---------------------
+El código está organizado en módulos independientes, separando claramente
+los cálculos termodinámicos del manejo de la interfaz:
+
+   ATM     — Atmósfera ISA (T, p, ρ por altitud)
+   COMB    — Propiedades de combustibles + AFR + Q_in
+   CICLO   — Estados termodinámicos: otto(), diesel(), sabathe()
+             (η de Diesel calculado por fórmula cerrada)
+   GEO     — Geometría del motor: cilindrada, D, S, opciones 4/6/8
+   VAL     — Validación de entradas, conversión de unidades, alertas
+
+   PLOT    — Generación de gráficos Plotly (con limitación r>7 en
+             Tmax vs r para Diesel/Sabathé)
+   UI      — Lectura de inputs, render de tablas/cards/alertas, tabs, modal
+             (Nº de cilindros fijado en 4 dentro de readInputs)
+   README  — Generación del archivo de instrucciones (este archivo)
+
+CONVENCIONES Y UNIDADES INTERNAS
+--------------------------------
+Toda la termodinámica se realiza en SI: K, Pa, m³, J, kg.
+Las conversiones a unidades de presentación (kPa, kJ/kg, cm³, mm, %, °C)
+ocurren ÚNICAMENTE en la capa de UI.
+
+VALIDACIONES Y ALERTAS
+----------------------
+· Validación de tipo y rango sobre cada entrada.
+· Alerta ▲ si Tmax supera el límite (default 4200 K).
+· Alerta ▲ si pmax supera el límite (default 10000 kPa = 100 bar).
+· Alerta ▲ si el ciclo Diesel se limita con r_min por expansión fuera de PMI.
+· Error ✗ explícito ante PME ≤ 0 o η fuera de [0, 1].
+
+COMENTARIOS SOBRE EL MODELO
+---------------------------
+El modelo aire-estándar frío sobreestima sistemáticamente Tmax y η porque
+ignora la disociación a altas T, la variación de cp con T, las pérdidas
+por transferencia de calor, la combustión finita y la fricción interna.
+
+HISTORIAL DE VERSIONES
+----------------------
+v1 — Versión inicial.
+v2 — Sliders duales, presiones en kPa, 12 combustibles, r independientes.
+v3 — Decimales con coma (es-AR), auto-recalc optimizado, n-Heptano.
+v4 — Límite dinámico (r mínimo) para Diesel basado en Q_in. Inputs
+     numéricos editables junto a los sliders. Tooltips descriptivos en
+     las etiquetas del sidebar. Botón "Descargar Gráfico" con tema
+     claro/blanco y nombres de archivo generados dinámicamente. Rango
+     de k extendido a [1,0; 1,7]. Tmax por defecto en 4800 K.
+v5 — Cambios solicitados:
+     · Configuración inicial por defecto: ciclo Sabathé, r=12,
+       η_mec = 0,85, Tmax = 4200 K.
+     · Reducción del catálogo de combustibles a 6 (Hexano, Heptano,
+       Octano, Decano, Benceno, Tolueno). Heptano predeterminado.
+     · Eliminación de la recomendación automática de cilindros y de
+       la columna de evaluación. Predimensionamiento fijado en 4
+       cilindros; la tabla 4/6/8 se conserva sólo a título informativo.
+     · Cálculo de η del ciclo Diesel reescrito mediante fórmula
+       analítica cerrada (verificado equivalente al balance de energía
+       hasta el error numérico de coma flotante).
+     · Gráficos Tmax vs r de Diesel y Sabathé restringidos a r > 7.
+=====================================================================`;
+  }
+  return { text };
+})();
+
+window.addEventListener('DOMContentLoaded', UI.init);
+</script>
+</body>
+</html>
