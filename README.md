@@ -223,26 +223,3 @@ El modelo aire-estándar frío sobreestima sistemáticamente Tmax y η porque
 ignora la disociación a altas T, la variación de cp con T, las pérdidas
 por transferencia de calor, la combustión finita y la fricción interna.
 
-HISTORIAL DE VERSIONES
-----------------------
-v1 — Versión inicial.
-v2 — Sliders duales, presiones en kPa, 12 combustibles, r independientes.
-v3 — Decimales con coma (es-AR), auto-recalc optimizado, n-Heptano.
-v4 — Límite dinámico (r mínimo) para Diesel basado en Q_in. Inputs
-     numéricos editables junto a los sliders. Tooltips descriptivos en
-     las etiquetas del sidebar. Botón "Descargar Gráfico" con tema
-     claro/blanco y nombres de archivo generados dinámicamente. Rango
-     de k extendido a [1,0; 1,7]. Tmax por defecto en 4800 K.
-v5 — Cambios solicitados:
-     · Configuración inicial por defecto: ciclo Sabathé, r=12,
-       η_mec = 0,85, Tmax = 4200 K.
-     · Reducción del catálogo de combustibles a 6 (Hexano, Heptano,
-       Octano, Decano, Benceno, Tolueno). Heptano predeterminado.
-     · Eliminación de la recomendación automática de cilindros y de
-       la columna de evaluación. Predimensionamiento fijado en 4
-       cilindros; la tabla 4/6/8 se conserva sólo a título informativo.
-     · Cálculo de η del ciclo Diesel reescrito mediante fórmula
-       analítica cerrada (verificado equivalente al balance de energía
-       hasta el error numérico de coma flotante).
-     · Gráficos Tmax vs r de Diesel y Sabathé restringidos a r > 7.
-=====================================================================
